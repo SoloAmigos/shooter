@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0a1230" />
+  <title>Bridge Brigade</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <!-- Three.js is vendored locally (vendor/three) so the game runs offline
+       and isn't tied to a CDN being reachable. -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "./vendor/three/three.module.js",
+        "three/addons/": "./vendor/three/addons/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+  <div id="ui-root"></div>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

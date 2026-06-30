@@ -1,0 +1,12 @@
+{
+  "name": "bridge-brigade",
+  "version": "0.1.0",
+  "description": "An honest, polished take on the crowd-runner / count-master mobile game genre. Built with Three.js.",
+  "type": "module",
+  "scripts": {
+    "start": "npx --yes serve -l 5173 .",
+    "dev": "npx --yes serve -l 5173 ."
+  },
+  "keywords": ["game", "threejs", "crowd-runner", "webgl"],
+  "license": "MIT"
+}
