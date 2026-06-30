@@ -4,8 +4,8 @@
 export const Settings = {
   // ---- Rendering / world ----
   bridge: {
-    width: 11,        // playable left-right span
-    margin: 1.2,      // keep squad away from the very edge
+    width: 17,        // playable left-right span (wider = less cramped)
+    margin: 1.0,      // keep squad away from the very edge
     segmentLength: 24,// length of one repeating bridge tile
     railHeight: 0.6,
   },
@@ -20,21 +20,23 @@ export const Settings = {
 
   // ---- Player squad ----
   squad: {
-    baseUnits: 6,         // starting count before meta upgrades
+    baseUnits: 8,         // starting count before meta upgrades
     runSpeed: 9.0,        // forward units/sec
-    steerSpeed: 16.0,     // left-right responsiveness
-    spacing: 0.62,        // gap between soldiers in formation
-    maxRenderUnits: 320,  // hard cap on instanced soldier meshes
-    contactDamageCooldown: 0.18, // how often a touching enemy bites
-    formationColumns: 7,  // soldiers per row in the blob
+    steerSpeed: 22.0,     // left-right responsiveness (keyboard)
+    dragSensitivity: 2.6, // screen-drag -> world steering factor
+    spacing: 0.6,         // gap between soldiers in formation
+    maxRenderUnits: 360,  // hard cap on instanced soldier meshes
+    formationColumns: 9,  // soldiers per row in the blob
   },
 
   // ---- Combat ----
   combat: {
-    bulletMaxAlive: 700,
-    bulletLifetime: 1.6,
-    enemyMaxRender: 360,
-    aimRange: 60,         // how far ahead bullets are relevant
+    bulletMaxAlive: 1600,
+    bulletLifetime: 1.5,
+    enemyMaxRender: 460,
+    // Firepower scaling: beyond a weapon's stream cap, every extra soldier
+    // adds this fraction to bullet damage so a bigger army always hits harder.
+    overflowDamagePerUnit: 0.04,
   },
 
   // ---- Progression / economy ----

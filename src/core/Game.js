@@ -72,7 +72,7 @@ export class Game {
 
     this.hud = new HUD(root);
     this.screens = new Screens(root, this.prog, {
-      onPlay: () => this.startRun(1),
+      onPlay: () => this.startRun(this.prog.getCurrentLevel()),
       onNext: () => this.startRun(this.levelNum + 1),
       onRetry: () => this.startRun(this.levelNum),
       onToggleMute: () => this._toggleMute(),
@@ -107,6 +107,7 @@ export class Game {
     this.runCoins = 0;
     this._level = generateLevel(levelNum);
     this._spawnIdx = 0;
+    this.prog.setCurrentLevel(levelNum); // resume here if they leave & come back
 
     this.env.buildBridge(this._level.length);
     this.enemies.reset();
@@ -114,12 +115,12 @@ export class Game {
     this.crates.reset();
     this.boss.despawn();
 
-    this.squad.reset(
-      this.prog.getStartUnits(),
-      this.prog.getStartWeaponId(),
-      this.prog.getDamageMul(),
-      this.prog.getFireMul()
-    );
+    this.squad.reset(this.prog.getStartUnits(), this.prog.getStartWeaponId(), {
+      damageMul: this.prog.getDamageMul(),
+      fireMul: this.prog.getFireMul(),
+      critChance: this.prog.getCritChance(),
+      bonusStreams: this.prog.getBonusStreams(),
+    });
 
     this.state = 'playing';
     this.screens.hide();
@@ -129,6 +130,8 @@ export class Game {
   _endRun(won) {
     this.prog.addCoins(this.runCoins);
     this.prog.recordLevel(won ? this.levelNum + 1 : this.levelNum);
+    // Advance the resume point on a win; on a loss you retry the same level.
+    this.prog.setCurrentLevel(won ? this.levelNum + 1 : this.levelNum);
     this.prog.save();
     this.hud.show(false);
 
@@ -200,10 +203,10 @@ export class Game {
     while (this._spawnIdx < events.length && events[this._spawnIdx].z <= this.squad.z + SPAWN_AHEAD) {
       const ev = events[this._spawnIdx++];
       switch (ev.type) {
-        case 'gatePair': this.gates.spawnPair(ev); break;
+        case 'gatePair': this.gates.spawnPair(ev, this.squad.count); break;
         case 'crowd': this.enemies.spawnCrowd(ev); break;
         case 'crate': this.crates.spawn(ev); break;
-        case 'boss': this.boss.spawn(ev.z, ev.hpMul); break;
+        case 'boss': this.boss.spawn(ev.z, this.levelNum); break;
         case 'finish': /* marker only */ break;
       }
     }
@@ -235,10 +238,18 @@ export class Game {
   }
 
   _updatePlaying(dt) {
-    // Steering input.
+    // Steering input. The follow-cam looks down +Z, which mirrors world X on
+    // screen, so we negate: pressing right / dragging right moves right.
     const { axis, drag } = this.input.consumeSteer();
-    const steerX = axis * Settings.squad.steerSpeed * dt + drag * Settings.bridge.width * 1.8;
+    const steerX = -(axis * Settings.squad.steerSpeed * dt +
+      drag * Settings.bridge.width * Settings.squad.dragSensitivity);
     this.squad.update(dt, steerX);
+
+    // While a boss is alive it's a wall: hold the squad at the arena line so
+    // it can't just run past. The fight happens here until the boss drops.
+    if (this.boss.active && this.squad.z > this.boss.lineZ) {
+      this.squad.z = this.boss.lineZ;
+    }
 
     this._spawnPending();
 

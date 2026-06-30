@@ -15,6 +15,8 @@ export class Squad {
     this.weapon = WEAPON_BY_ID.pistol;
     this.damageMul = 1;
     this.fireMul = 1;
+    this.critChance = 0;
+    this.bonusStreams = 0;
     this.fireTimer = 0;
     this._time = 0;
 
@@ -35,13 +37,15 @@ export class Squad {
     this._colorsDirty = true;
   }
 
-  reset(startCount, weaponId, damageMul, fireMul) {
+  reset(startCount, weaponId, stats = {}) {
     this.count = Math.max(1, Math.round(startCount));
     this.x = 0;
     this.z = 0;
     this.weapon = WEAPON_BY_ID[weaponId] ?? WEAPON_BY_ID.pistol;
-    this.damageMul = damageMul ?? 1;
-    this.fireMul = fireMul ?? 1;
+    this.damageMul = stats.damageMul ?? 1;
+    this.fireMul = stats.fireMul ?? 1;
+    this.critChance = stats.critChance ?? 0;
+    this.bonusStreams = stats.bonusStreams ?? 0;
     this.fireTimer = 0;
     this._colorsDirty = true;
   }
@@ -85,8 +89,10 @@ export class Squad {
     this.z += s.runSpeed * dt;
 
     // Steering: steerX is a desired delta in world units this frame.
-    const half = Settings.bridge.width / 2 - Settings.bridge.margin;
-    this.x = clamp(this.x + steerX, -half, half);
+    // Clamp by the formation's half-width too, so no soldier spills off the
+    // bridge — the whole blob stays zoned inside the rails.
+    const limit = Settings.bridge.width / 2 - Settings.bridge.margin - this.half;
+    this.x = clamp(this.x + steerX, -limit, limit);
 
     this._rebuildInstances();
   }

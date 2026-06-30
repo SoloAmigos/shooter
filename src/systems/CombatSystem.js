@@ -1,4 +1,5 @@
 import { formatNumber } from '../util/math.js';
+import { Settings } from '../config/Settings.js';
 
 // Orchestrates firing and all bullet collisions (enemies, crates, boss).
 // Pulls its references from a shared context object built by Game.
@@ -20,9 +21,18 @@ export class CombatSystem {
     const w = squad.weapon;
     squad.fireTimer = 1 / (w.fireRate * squad.fireMul);
 
-    const streams = Math.max(1, Math.min(squad.count, w.streams));
+    // Streams scale with squad size up to the weapon's cap (+ upgrades);
+    // soldiers beyond the cap pour extra damage into every bullet, so power
+    // never plateaus no matter how huge the army gets.
+    const cap = w.streams + (squad.bonusStreams || 0);
+    const streams = Math.max(1, Math.min(squad.count, cap));
+    const overflow = Math.max(0, squad.count - cap);
+    const overflowMul = 1 + overflow * Settings.combat.overflowDamagePerUnit;
+
+    const crit = Math.random() < (squad.critChance || 0);
+    const dmg = w.damage * squad.damageMul * overflowMul * (crit ? 3 : 1);
+
     const muzzles = squad.getMuzzles(streams);
-    const dmg = w.damage * squad.damageMul;
 
     for (const mz of muzzles) {
       for (let s = 0; s < w.bulletsPerShot; s++) {

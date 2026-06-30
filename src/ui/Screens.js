@@ -86,6 +86,7 @@ export class Screens {
     this.screenMenu.style.display = 'flex';
     this.el.querySelector('#menu-best').textContent = this.prog.data.highestLevel;
     this.el.querySelector('#menu-coins').textContent = formatNumber(this.prog.coins);
+    this.el.querySelector('#btn-play').textContent = `PLAY · LEVEL ${this.prog.getCurrentLevel()}`;
     this.muteBtn.textContent = `SOUND: ${this.prog.data.muted ? 'OFF' : 'ON'}`;
   }
 

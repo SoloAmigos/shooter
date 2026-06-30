@@ -5,6 +5,11 @@ import { makeRng } from '../util/math.js';
 // Deterministically builds a level layout from its number. Same level
 // number always yields the same layout, but difficulty scales upward
 // forever — that's the "infinite levels" backbone.
+//
+// Gate *values* are intentionally NOT decided here: they're computed at
+// spawn time from the squad's current size (see GateManager) so an "add"
+// option can stay competitive with a "multiply" option no matter how big
+// the army is.
 export function generateLevel(levelNum) {
   const rng = makeRng(levelNum * 2654435761 + 12345);
   const L = Settings.level;
@@ -15,13 +20,12 @@ export function generateLevel(levelNum) {
   const isBoss =
     levelNum >= L.firstBossLevel && (levelNum - L.firstBossLevel) % L.bossEvery === 0;
 
-  const hpMul = 1 + (levelNum - 1) * 0.22;
-  const countMul = 1 + (levelNum - 1) * 0.12;
+  const hpMul = 1 + (levelNum - 1) * 0.3;
+  const countMul = 1 + (levelNum - 1) * 0.16;
 
-  // Reserve room at the end for the boss / finish.
-  const usable = length - (isBoss ? 26 : 12);
+  const usable = length - (isBoss ? 30 : 14);
   let z = 16;
-  const step = () => 14 + rng() * 10;
+  const step = () => 11 + rng() * 8;
 
   // Unlock tougher enemy types as levels progress.
   const pool = ['runner'];
@@ -29,22 +33,24 @@ export function generateLevel(levelNum) {
   if (levelNum >= 3) pool.push('shielded');
   if (levelNum >= 4) pool.push('tank');
 
+  const baseCount = { runner: 22, fast: 15, shielded: 11, tank: 6 };
+  let gateSeed = levelNum * 7919;
   let gateBudget = 0;
+
   while (z < usable) {
     const roll = rng();
 
-    if (roll < 0.42 || gateBudget < 1) {
-      // ---- Gate pair: the core decision ----
-      events.push({ type: 'gatePair', z, options: makeGatePair(rng, levelNum) });
+    if (roll < 0.38 || gateBudget < 1) {
+      // ---- Gate fork: the core decision (values resolved at spawn) ----
+      events.push({ type: 'gatePair', z, seed: gateSeed++, level: levelNum });
       gateBudget++;
-      z += step();
-    } else if (roll < 0.78) {
-      // ---- Enemy crowd ----
+      z += step() + 2;
+    } else if (roll < 0.82) {
+      // ---- Enemy crowd (now a real threat) ----
       const enemyType = pool[(rng() * pool.length) | 0];
-      const base = enemyType === 'tank' ? 4 : enemyType === 'shielded' ? 8 : 16;
-      const count = Math.round(base * countMul * (0.7 + rng() * 0.8));
-      events.push({ type: 'crowd', z, enemyType, count, hpMul, spread: 3 + rng() * 4 });
-      z += step() + 4;
+      const count = Math.max(3, Math.round(baseCount[enemyType] * countMul * (0.75 + rng() * 0.7)));
+      events.push({ type: 'crowd', z, enemyType, count, hpMul, spread: 4 + rng() * 5 });
+      z += step() + 5;
     } else {
       // ---- Weapon crate ----
       const tierCap = Math.min(WEAPONS.length - 1, 1 + Math.floor(levelNum / 2));
@@ -52,8 +58,8 @@ export function generateLevel(levelNum) {
       events.push({
         type: 'crate',
         z,
-        x: (rng() - 0.5) * (Settings.bridge.width - 3),
-        hp: Math.round(40 * hpMul),
+        x: (rng() - 0.5) * (Settings.bridge.width - 4),
+        hp: Math.round(60 * hpMul),
         weaponId: w.id,
       });
       z += step();
@@ -61,43 +67,11 @@ export function generateLevel(levelNum) {
   }
 
   if (isBoss) {
-    events.push({ type: 'boss', z: length - 16, hpMul });
+    events.push({ type: 'boss', z: length - 18 });
   }
 
   events.push({ type: 'finish', z: length });
   events.sort((a, b) => a.z - b.z);
 
   return { levelNum, length, isBoss, events };
-}
-
-// Produce two gate options for a fork. Steer left/right to choose.
-function makeGatePair(rng, levelNum) {
-  const mkCount = () => {
-    if (rng() < 0.55) {
-      // multiplicative
-      const m = 2 + ((rng() * 3) | 0); // x2..x4
-      return { kind: 'count', op: 'x', val: m, label: `x${m}` };
-    }
-    // additive (scales a little with level)
-    const a = 5 + ((rng() * (8 + levelNum)) | 0);
-    return { kind: 'count', op: '+', val: a, label: `+${a}` };
-  };
-
-  // Occasionally one side is a weapon or a damage buff to spice choices.
-  const r = rng();
-  let left = mkCount();
-  let right = mkCount();
-
-  if (r < 0.18 && levelNum >= 2) {
-    const tier = Math.min(WEAPONS.length - 1, 1 + ((rng() * 3) | 0));
-    const w = WEAPONS[tier];
-    left = { kind: 'weapon', weaponId: w.id, label: w.name };
-  } else if (r < 0.3) {
-    const pct = 15 + ((rng() * 25) | 0);
-    right = { kind: 'buff', stat: 'damage', val: pct / 100, label: `DMG +${pct}%` };
-  }
-
-  // Make sure the two options differ.
-  if (left.label === right.label) right = mkCount();
-  return [left, right];
 }

@@ -41,6 +41,24 @@ export const UPGRADES = {
     value: (lvl) => 1 + lvl * 0.12,
     display: (lvl) => `+${(lvl * 12)}%`,
   },
+  crit: {
+    name: 'Critical Hits',
+    desc: 'Chance for a shot to deal triple damage.',
+    baseCost: 80,
+    costMul: 1.55,
+    max: 30,
+    value: (lvl) => lvl * 0.02,
+    display: (lvl) => `${lvl * 2}%`,
+  },
+  streams: {
+    name: 'Extra Barrels',
+    desc: 'Fire more bullet streams at once.',
+    baseCost: 120,
+    costMul: 1.7,
+    max: 24,
+    value: (lvl) => lvl,
+    display: (lvl) => `+${lvl} streams`,
+  },
   weaponTier: {
     name: 'Loadout',
     desc: 'Start runs with a better gun.',
@@ -55,7 +73,8 @@ export const UPGRADES = {
 const DEFAULT_SAVE = {
   coins: 0,
   highestLevel: 1,
-  levels: { startUnits: 0, damage: 0, fireRate: 0, coin: 0, weaponTier: 0 },
+  currentLevel: 1, // where PLAY resumes from
+  levels: { startUnits: 0, damage: 0, fireRate: 0, coin: 0, crit: 0, streams: 0, weaponTier: 0 },
   muted: false,
 };
 
@@ -123,6 +142,21 @@ export class Progression {
   }
   getStartWeaponId() {
     return WEAPONS[this.level('weaponTier')].id;
+  }
+  getCritChance() {
+    return UPGRADES.crit.value(this.level('crit'));
+  }
+  getBonusStreams() {
+    return UPGRADES.streams.value(this.level('streams'));
+  }
+
+  // ---- Level progress (so PLAY resumes where you were) ----
+  getCurrentLevel() {
+    return this.data.currentLevel ?? 1;
+  }
+  setCurrentLevel(n) {
+    this.data.currentLevel = Math.max(1, n);
+    this.save();
   }
 
   recordLevel(n) {

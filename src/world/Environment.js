@@ -88,6 +88,34 @@ export class Environment {
       i++;
     }
 
+    // Decorative light posts along the rails to add depth and life.
+    const postMat = new THREE.MeshStandardMaterial({ color: 0x55607a, roughness: 0.6, metalness: 0.4 });
+    const lampMat = new THREE.MeshStandardMaterial({
+      color: 0xffd98a, emissive: 0xffb347, emissiveIntensity: 0.9, roughness: 0.4,
+    });
+    const postGeo = new THREE.CylinderGeometry(0.08, 0.1, 2.2, 6);
+    const lampGeo = new THREE.SphereGeometry(0.18, 8, 8);
+    for (let z = start + 8; z < end; z += segLen) {
+      for (const sx of [-1, 1]) {
+        const post = new THREE.Mesh(postGeo, postMat);
+        post.position.set((sx * W) / 2 + sx * 0.25, 1.1, z);
+        post.castShadow = true;
+        this.bridge.add(post);
+        const lamp = new THREE.Mesh(lampGeo, lampMat);
+        lamp.position.set((sx * W) / 2 + sx * 0.25, 2.25, z);
+        this.bridge.add(lamp);
+      }
+    }
+
+    // A few buoys bobbing in the water for scenery.
+    const buoyMat = new THREE.MeshStandardMaterial({ color: 0xff5a5a, roughness: 0.5 });
+    for (let i = 0; i < 10; i++) {
+      const buoy = new THREE.Mesh(new THREE.ConeGeometry(0.6, 1.4, 6), buoyMat);
+      const side = i % 2 ? 1 : -1;
+      buoy.position.set(side * (W / 2 + 4 + Math.random() * 14), -0.2, start + Math.random() * (end - start));
+      this.bridge.add(buoy);
+    }
+
     // Finish line marker near the end.
     const finish = new THREE.Mesh(
       new THREE.BoxGeometry(W, 0.05, 1.2),
